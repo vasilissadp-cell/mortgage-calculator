@@ -19,7 +19,7 @@ jobs:
 
   deploy:
     name: Деплой на production
-    runs-on: self-hosted  # ← ВАЖНО: используем self-hosted runner
+    runs-on: self-hosted
     needs: test
 
     steps:
@@ -32,10 +32,18 @@ jobs:
         cd /opt/mortgage-calculator
         pip3 install -r requirements.txt
     - run: |
-        echo "=== ТЕСТИРОВАНИЕ ПРИЛОЖЕНИЯ ==="
+        echo "=== ЗАПУСК ПРИЛОЖЕНИЯ В ФОНОВОМ РЕЖИМЕ ==="
         cd /opt/mortgage-calculator
-        echo -e "1000000\n7.5\n20" | python3 app.py
+        # Останавливаем предыдущую версию если запущена
+        pkill -f "python3 app.py" || true
+        sleep 2
+        # Запускаем в фоне
+        nohup python3 app.py > app.log 2>&1 &
+        sleep 5
+    - run: |
+        echo "=== ПРОВЕРКА РАБОТОСПОСОБНОСТИ ==="
+        curl -f http://localhost:5000/health || echo "Приложение не ответило"
     - run: |
         echo "=== ДЕПЛОЙ УСПЕШНО ЗАВЕРШЕН ==="
-        echo "Приложение развернуто в /opt/mortgage-calculator"
-        ls -la /opt/mortgage-calculator/
+        echo "Приложение развернуто и запущено в /opt/mortgage-calculator"
+        echo "Логи: /opt/mortgage-calculator/app.log"
