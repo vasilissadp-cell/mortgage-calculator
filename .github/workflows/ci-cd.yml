@@ -1,120 +1,41 @@
-name: 🚀 CI/CD Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
   test:
-    name: 🧪 Запуск тестов
+    name: Запуск тестов
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: 🐍 Set up Python
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4
       with:
         python-version: '3.9'
-        cache: 'pip'
-    
-    - name: 📦 Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: ✅ Run unit tests
-      run: |
-        echo "Запуск unit-тестов..."
-        python -m unittest tests/test_calculator.py -v
-    
-    - name: 🔄 Run integration tests
-      run: |
-        echo "Запуск интеграционных тестов..."
-        python -m unittest tests/test_app.py -v
-    
-    - name: 📊 Test summary
-      run: |
-        echo "✅ Все тесты выполнены успешно!"
-        echo "📁 Структура проекта:"
-        find . -name "*.py" -type f | head -10
+    - run: pip install -r requirements.txt
+    - run: python -m unittest discover tests -v
 
   deploy:
-    name: 🚀 Деплой на production
-    runs-on: ubuntu-latest
+    name: Деплой на production
+    runs-on: self-hosted  # ← ВАЖНО: используем self-hosted runner
     needs: test
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    
+
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-    
-    - name: 🐍 Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    
-    - name: 📦 Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: 🔐 Setup SSH
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
-    
-    - name: 🚀 Deploy to production
-      run: |
-        echo "Начинаем деплой на production сервер..."
-        
-        # Создаем SSH конфиг
-        mkdir -p ~/.ssh
-        chmod 700 ~/.ssh
-        
-        # Копируем файлы на сервер
-        echo "Копируем файлы на сервер..."
-        scp -o StrictHostKeyChecking=no \
-            app.py calculator.py requirements.txt \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
-        
-        # Выполняем команды на сервере
-        echo "Выполняем деплой на сервере..."
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "
-          echo '🔄 Остановка предыдущей версии приложения...'
-          pkill -f 'python app.py' || echo 'Приложение не было запущено'
-          
-          echo '📁 Создание директории приложения...'
-          mkdir -p /opt/mortgage-calculator
-          
-          echo '📋 Копирование файлов...'
-          cp /tmp/app.py /opt/mortgage-calculator/
-          cp /tmp/calculator.py /opt/mortgage-calculator/
-          cp /tmp/requirements.txt /opt/mortgage-calculator/
-          
-          echo '📦 Установка зависимостей...'
-          cd /opt/mortgage-calculator
-          pip3 install -r requirements.txt
-          
-          echo '🚀 Запуск приложения...'
-          nohup python3 app.py > app.log 2>&1 &
-          
-          echo '⏳ Ожидание запуска приложения...'
-          sleep 5
-          
-          echo '✅ Проверка работоспособности...'
-          curl -f http://localhost:5000/health || echo 'Приложение не ответило'
-          
-          echo '🎉 Деплой завершен успешно!'
-        "
-        
-    - name: 📝 Deployment summary
-      run: |
-        echo "🎉 Деплой завершен!"
-        echo "🌐 Приложение доступно по адресу: http://${{ secrets.SERVER_HOST }}:5000"
-        echo "❤️  Проверка здоровья: http://${{ secrets.SERVER_HOST }}:5000/health"
+    - uses: actions/checkout@v4
+    - run: |
+        echo "=== КОПИРОВАНИЕ ФАЙЛОВ НА PRODUCTION ==="
+        cp app.py calculator.py requirements.txt /opt/mortgage-calculator/
+    - run: |
+        echo "=== УСТАНОВКА ЗАВИСИМОСТЕЙ ==="
+        cd /opt/mortgage-calculator
+        pip3 install -r requirements.txt
+    - run: |
+        echo "=== ТЕСТИРОВАНИЕ ПРИЛОЖЕНИЯ ==="
+        cd /opt/mortgage-calculator
+        echo -e "1000000\n7.5\n20" | python3 app.py
+    - run: |
+        echo "=== ДЕПЛОЙ УСПЕШНО ЗАВЕРШЕН ==="
+        echo "Приложение развернуто в /opt/mortgage-calculator"
+        ls -la /opt/mortgage-calculator/
