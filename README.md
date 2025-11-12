@@ -21,4 +21,4 @@
 
 1. –£—Å—Ç–∞–Ω–æ–≤–∏—Ç–µ –∑–∞–≤–∏—Å–∏–º–æ—Å—Ç–∏:
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt"# í•·‚Æ¢Æ• Æ°≠Æ¢´•≠®•" 
